@@ -2,8 +2,8 @@
 package main
 
 import (
-	aisignals "github.com/capybari/capybari-analyzer-ai-signals"
-	"github.com/capybari/capybari-core/standalone"
+	aisignals "github.com/capybari-repo/capybari-analyzer-ai-signals"
+	"github.com/capybari-repo/capybari-core/standalone"
 )
 
 var version = "dev"

@@ -15,7 +15,7 @@ execution:
   network: none
   ai: none
 privacy: Runs on evidence already collected (the fetched page or the local files). Nothing is sent anywhere, and no AI model is used.
-methodology: https://github.com/capybari/capybari-analyzer-ai-signals/blob/main/docs/methodology.md
+methodology: https://github.com/capybari-repo/capybari-analyzer-ai-signals/blob/main/docs/methodology.md
 follow_ups:
   - capability: web-security
     reason: Separate AI-use indicators from actual quality; check the site's real security configuration.

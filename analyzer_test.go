@@ -8,11 +8,11 @@ import (
 	"strings"
 	"testing"
 
-	aisignals "github.com/capybari/capybari-analyzer-ai-signals"
-	"github.com/capybari/capybari-core/analyzer"
-	"github.com/capybari/capybari-core/analyzertest"
-	"github.com/capybari/capybari-core/finding"
-	"github.com/capybari/capybari-schemas"
+	aisignals "github.com/capybari-repo/capybari-analyzer-ai-signals"
+	"github.com/capybari-repo/capybari-core/analyzer"
+	"github.com/capybari-repo/capybari-core/analyzertest"
+	"github.com/capybari-repo/capybari-core/finding"
+	"github.com/capybari-repo/capybari-schemas"
 	"gopkg.in/yaml.v3"
 )
 
