@@ -1,0 +1,27 @@
+id: ai-signals
+name: AI-Generation Signals
+version: 0.1.0
+category: ai
+summary: Looks for indicators of unreviewed AI-generated content or code (boilerplate marketing phrases, placeholder text, AI site-builder fingerprints, template leftovers, scaffolding comments) and reports an AI Dependability score. Indicators, not proof.
+stability: experimental
+core_api: v0
+targets: [website, repository]
+optional: [web-snapshot, inventory, technologies]
+findings: [ai-boilerplate, placeholder-content, ai-builder, template-leftover, scaffold-code, ai-assistant-config]
+scores: [ai-signals]
+cost: low
+execution:
+  local: true
+  network: none
+  ai: none
+privacy: Runs on evidence already collected (the fetched page or the local files). Nothing is sent anywhere, and no AI model is used.
+methodology: https://github.com/capybari/capybari-analyzer-ai-signals/blob/main/docs/methodology.md
+follow_ups:
+  - capability: web-security
+    reason: Separate AI-use indicators from actual quality; check the site's real security configuration.
+  - capability: web-tech
+    reason: Identify the builder and components behind the site.
+  - capability: code-health
+    reason: Check whether the generated-looking code is also complex or duplicated.
+    when:
+      finding_categories: [scaffold-code]

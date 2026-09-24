@@ -1,0 +1,64 @@
+# Phrases strongly over-represented in unedited LLM marketing copy.
+# Matching is case-insensitive on visible page text. Contributions welcome,
+# but every addition must be justified: common English is not a signal.
+boilerplate:
+  - unlock the power
+  - unlock the full potential
+  - harness the power
+  - in today's fast-paced
+  - in today's digital
+  - ever-evolving
+  - ever-changing landscape
+  - digital landscape
+  - elevate your
+  - take your .* to the next level
+  - seamless experience
+  - seamlessly integrate
+  - cutting-edge
+  - revolutionize the way
+  - empower you to
+  - empowers you to
+  - whether you're a
+  - look no further
+  - game-changer
+  - embark on a journey
+  - a testament to
+  - rich tapestry
+  - delve into
+  - navigate the complexities
+  - unleash your
+  - designed to help you
+  - we're here to help you
+  - your trusted partner
+  - tailored solutions
+  - innovative solutions
+  - streamline your
+  - at the forefront of
+placeholders:
+  - lorem ipsum
+  - dolor sit amet
+  - your company name
+  - company name here
+  - "\\[your [a-z ]+\\]"
+  - example@example\.com
+  - "123 main st"
+  - "\\(555\\) ?555-"
+  - insert text here
+  - john doe
+  - acme (?:corp|inc)
+template_leftovers:
+  - just another wordpress site
+  - hello world!
+  - sample page
+  - welcome to your new site
+  - edit this text
+  - add your content here
+  - "© \\d{4} your company"
+scaffold_comments:
+  - in a real (?:application|app|implementation|world scenario)
+  - this is a (?:simplified|mock|placeholder) (?:implementation|version|example)
+  - replace (?:this|with) (?:your|actual) (?:api key|logic|implementation|data)
+  - add your (?:own )?(?:logic|code|implementation) here
+  - for demonstration purposes
+  - mock data for now
+  - "todo: implement (?:actual|real|proper)"
