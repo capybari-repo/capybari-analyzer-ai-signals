@@ -1,39 +1,81 @@
 # Phrases strongly over-represented in unedited LLM marketing copy.
-# Matching is case-insensitive on visible page text. Contributions welcome,
-# but every addition must be justified: common English is not a signal.
+# Matching is case-insensitive on visible page text. A page is flagged only
+# when several *distinct* phrases appear at high density (see methodology),
+# so one "cutting-edge" in human copy never triggers a finding.
+# Contributions welcome; every addition must be justified with examples.
 boilerplate:
-  - unlock the power
-  - unlock the full potential
-  - harness the power
+  # openers and scene-setting
   - in today's fast-paced
   - in today's digital
+  - in today's competitive
+  - in the ever-evolving
   - ever-evolving
   - ever-changing landscape
   - digital landscape
+  - digital age
+  - in a world where
+  - look no further
+  - whether you're a
+  - whether you are a
+  # promises and power verbs
+  - unlock the power
+  - unlock the full potential
+  - unlock your
+  - unleash your
+  - unleash the power
+  - harness the power
   - elevate your
-  - take your .* to the next level
-  - seamless experience
-  - seamlessly integrate
-  - cutting-edge
+  - supercharge your
   - revolutionize the way
+  - revolutionize your
+  - transform the way
+  - transform your
   - empower you to
   - empowers you to
-  - whether you're a
-  - look no further
+  - empowering you
+  - take your .{1,30} to the next level
+  - reach new heights
+  - stay ahead of the curve
+  - stand out from the crowd
+  # adjectives in stock pairings
+  - seamless experience
+  - seamlessly integrate
+  - seamless integration
+  - cutting-edge
+  - state-of-the-art
   - game-changer
+  - game-changing
+  - innovative solutions
+  - tailored solutions
+  - tailored to your needs
+  - robust and scalable
+  - user-friendly interface
+  - intuitive and user-friendly
+  - effortless(?:ly)?
+  # metaphors LLMs overuse
   - embark on a journey
   - a testament to
   - rich tapestry
   - delve into
   - navigate the complexities
-  - unleash your
+  - navigate the world of
+  - at the forefront of
+  - at the heart of
+  - a myriad of
+  - plethora of
+  # hedged service copy
   - designed to help you
   - we're here to help you
   - your trusted partner
-  - tailored solutions
-  - innovative solutions
+  - your one-stop
+  - one-stop shop
   - streamline your
-  - at the forefront of
+  - peace of mind
+  - with ease
+  - like never before
+  - it's not just .{1,30}, it's
+  - more than just a
+  - dive into
 placeholders:
   - lorem ipsum
   - dolor sit amet
@@ -62,3 +104,14 @@ scaffold_comments:
   - for demonstration purposes
   - mock data for now
   - "todo: implement (?:actual|real|proper)"
+# AI site builders, detected in markup (generator tags, badges, asset hosts).
+builders:
+  - {name: Lovable, pattern: '(?i)lovable\.(?:dev|app)|gptengineer\.js|data-lov-id|edit with lovable'}
+  - {name: v0, pattern: '(?i)v0\.dev|made with v0|v0-[a-z0-9]{6,}\.vercel\.app'}
+  - {name: Bolt.new, pattern: '(?i)bolt\.new|made with bolt|\.bolt\.host'}
+  - {name: Framer, pattern: '(?i)<meta[^>]+generator[^>]+framer|framerusercontent\.com|made in framer'}
+  - {name: Wix, pattern: '(?i)<meta[^>]+generator[^>]+wix\.com|static\.wixstatic\.com'}
+  - {name: Durable, pattern: '(?i)durable\.co|built with durable'}
+  - {name: 10Web, pattern: '(?i)10web\.io|10web ai builder'}
+  - {name: Hostinger AI Website Builder, pattern: '(?i)<meta[^>]+generator[^>]+hostinger|zyrosite\.com|zyro\.com'}
+  - {name: Base44, pattern: '(?i)base44\.(?:com|app)'}

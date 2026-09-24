@@ -8,14 +8,22 @@
 
 ## Website
 
-Visible text = page markup without scripts, styles, SVG and tags, with entities decoded.
+**What is read:** the front page plus up to 5 same-site pages linked from it, fetched by the Website Snapshot (politely: one at a time, `robots.txt` honoured, never login/logout/admin/cart/file links). Visible text is the markup without scripts, styles, SVG and templates, with entities decoded.
+
+**Not enough content:** if all pages together contain fewer than **150 words** of visible text, the capability reports **not assessable** and no AI Dependability score is shown. A near-empty page, or a JavaScript app that renders its text in the browser, must not score a perfect 100 simply because there was nothing to read.
 
 | Rule | Trigger | Severity | Confidence |
 |---|---|---|---|
-| `ai-boilerplate-density` | ≥ 3 distinct stock phrases **and** ≥ 5 per 1,000 words | low; medium at ≥ 6 distinct and ≥ 15 per 1,000 | low |
-| `placeholder-content` | any placeholder fragment | medium | high |
+| `ai-boilerplate-density` | ≥ 3 distinct stock phrases (of 67) **and** ≥ 5 per 1,000 words | low | low |
+| | ≥ 6 distinct and ≥ 15 per 1,000 words | medium | low |
+| | ≥ 10 distinct and ≥ 30 per 1,000 words | high | medium |
+| `placeholder-content` | any placeholder fragment (lorem ipsum, "Your Company", 555 numbers, example@example.com) | high: visible broken content | high |
 | `template-leftover` | default theme/builder text | low | medium |
-| `ai-builder` | AI site builder detected by `web-tech` | info | high |
+| `ai-builder` | builder fingerprint in the markup of any page (generator tags, badges, asset hosts: Lovable, v0, Bolt.new, Framer, Wix, Durable, 10Web, Hostinger AI, Base44) or detected by `web-tech` | info | high |
+
+Evidence always includes at least one sample from every page that contributed.
+
+**Basis:** the result always states what was checked, e.g. *"Checked 3 pages, 1,240 words: 0 of 67 stock phrases found (0.0 per 1,000 words); no placeholders; no template leftovers; no AI builder detected."* The same line appears on the score card, so 100 is never an unexplained number.
 
 ## Repository
 

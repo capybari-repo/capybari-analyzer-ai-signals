@@ -1,8 +1,8 @@
 id: ai-signals
 name: AI-Generation Signals
-version: 0.1.0
+version: 0.2.0
 category: ai
-summary: Looks for indicators of unreviewed AI-generated content or code (boilerplate marketing phrases, placeholder text, AI site-builder fingerprints, template leftovers, scaffolding comments) and reports an AI Dependability score. Indicators, not proof.
+summary: Looks for indicators of unreviewed AI-generated content or code across the front page and up to 5 linked pages (67 boilerplate marketing phrases, placeholder text, AI site-builder fingerprints, template leftovers, scaffolding comments) and reports an AI Dependability score. Pages with too little text are marked not assessable. Indicators, not proof.
 stability: experimental
 core_api: v0
 targets: [website, repository]
@@ -14,7 +14,7 @@ execution:
   local: true
   network: none
   ai: none
-privacy: Runs on evidence already collected (the fetched page or the local files). Nothing is sent anywhere, and no AI model is used.
+privacy: Runs on evidence already collected (the fetched pages or the local files). Nothing is sent anywhere, and no AI model is used.
 methodology: https://github.com/capybari-repo/capybari-analyzer-ai-signals/blob/main/docs/methodology.md
 follow_ups:
   - capability: web-security
