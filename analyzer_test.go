@@ -204,3 +204,61 @@ func TestDensityScalesSeverity(t *testing.T) {
 		t.Fatalf("one comment in 5,000 lines should be low: %+v", sc)
 	}
 }
+
+func depth(r *report.Report) *report.Score {
+	for _, s := range r.Scores {
+		if s.ID == "build-depth" {
+			return &s
+		}
+	}
+	return nil
+}
+
+// A one-prompt page is short, but its generator defaults need no amount of
+// text to recognise: it must be assessed, flagged and read as shallow.
+func TestShortPageWithGeneratorDefaults(t *testing.T) {
+	srv := serveHTML(`<!doctype html><html lang="en"><head><title>Vite + React + TS</title><link rel="icon" type="image/svg+xml" href="/vite.svg">
+<meta name="description" content="Lovable Generated Project"></head><body><div id="root"><h1>Welcome</h1><p>Build faster with us.</p></div></body></html>`)
+	defer srv.Close()
+	r := runAny(t, analyzertest.Website(srv.URL))
+	run, _ := r.Capability("ai-signals")
+	if run.Status != report.StatusOK || !strings.Contains(run.Summary, "stock-phrase check skipped") {
+		t.Fatalf("short page with defaults must be assessed, copy not judged: %s %s %s", run.Status, run.Reason, run.Summary)
+	}
+	f, ok := byCategory(r.Findings)["template-leftover"]
+	if !ok || f.Rule.ID != "scaffold-defaults" || len(f.Evidence) != 3 {
+		t.Fatalf("generator defaults: %+v", r.Findings)
+	}
+	d := depth(r)
+	if d == nil || d.Value >= 35 || d.Label != "Shallow build" || d.IsHigherWorse() {
+		t.Fatalf("one-prompt page must read as a shallow build: %+v", d)
+	}
+}
+
+// Build Depth must rank a crafted site well above a generic one, whatever
+// tools built either.
+func TestBuildDepthRanksCraftAboveGeneric(t *testing.T) {
+	generic := serveHTML(`<html><head><title>Home</title></head><body><h1>Welcome</h1><p>` +
+		strings.Repeat("Unlock your potential with our cutting-edge, seamless solutions that empower your journey and elevate your experience. ", 12) + `</p></body></html>`)
+	defer generic.Close()
+	crafted := serveHTML(`<!doctype html><html lang="en"><head><title>Tallyroom — café rotas</title><meta name="viewport" content="width=device-width">
+<meta name="description" content="Build next week's café rota from staff availability in minutes."><meta property="og:title" content="Tallyroom"><meta property="og:image" content="/og.png">
+<link rel="icon" href="/favicon.svg"><link rel="canonical" href="/"><link rel="alternate" hreflang="de" href="/de/"><link rel="manifest" href="/site.webmanifest">
+<script type="application/ld+json">{"@type":"SoftwareApplication"}</script></head><body><nav><a href="/about">About</a> <a href="/privacy">Privacy</a> <a href="mailto:hello@tallyroom.co.uk">Email us</a></nav><main>
+<p>Tallyroom builds next week's rota in about 4 minutes. It knows that Priya can't open on Tuesdays and that you need 2 baristas between 8 and 10.</p>
+<p>We started at Harbour Street Bakery in Leith. Today 214 cafés in Scotland use it, most with 4 to 15 staff, for £19 a month.</p>
+<p>It flags rotas that break the 11 hours of rest between shifts, and exports hours to Xero every 14 days.</p>
+<p>Tallyroom is not a till or an HR system. If you run more than 3 sites, a larger tool will suit you better, and Aisha in support will tell you so.</p>
+<form><label for="e">Email</label><input id="e" type="email"><button type="submit">Start</button></form></main></body></html>`)
+	defer crafted.Close()
+	g, c := depth(runAny(t, analyzertest.Website(generic.URL))), depth(runAny(t, analyzertest.Website(crafted.URL)))
+	if g == nil || c == nil {
+		t.Fatalf("both sites must get Build Depth: %+v %+v", g, c)
+	}
+	if g.Value >= 35 || c.Value < 65 || c.Value-g.Value < 40 {
+		t.Fatalf("crafted %d vs generic %d: expected deep vs shallow", c.Value, g.Value)
+	}
+	if len(c.Components) != 6 || c.Components[0].Max != 15 {
+		t.Fatalf("components with max points expected: %+v", c.Components)
+	}
+}

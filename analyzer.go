@@ -30,15 +30,18 @@ var phrasesYAML []byte
 var capability = analyzer.MustParseCapability(capabilityYAML)
 
 type phraseSet struct {
-	Boilerplate       []string `yaml:"boilerplate"`
-	Placeholders      []string `yaml:"placeholders"`
-	TemplateLeftovers []string `yaml:"template_leftovers"`
-	ScaffoldComments  []string `yaml:"scaffold_comments"`
-	PlaceholderConfig []string `yaml:"placeholder_config"`
-	Builders          []struct {
-		Name    string `yaml:"name"`
-		Pattern string `yaml:"pattern"`
-	} `yaml:"builders"`
+	Boilerplate       []string       `yaml:"boilerplate"`
+	Placeholders      []string       `yaml:"placeholders"`
+	TemplateLeftovers []string       `yaml:"template_leftovers"`
+	ScaffoldComments  []string       `yaml:"scaffold_comments"`
+	PlaceholderConfig []string       `yaml:"placeholder_config"`
+	Builders          []namedPattern `yaml:"builders"`
+	ScaffoldDefaults  []namedPattern `yaml:"scaffold_defaults"`
+}
+
+type namedPattern struct {
+	Name    string `yaml:"name"`
+	Pattern string `yaml:"pattern"`
 }
 
 type builderRule struct {
@@ -46,16 +49,23 @@ type builderRule struct {
 	re   *regexp.Regexp
 }
 
-// MinWords is the least visible text needed to assess a website: below it
-// there is too little copy for the indicators to mean anything.
+// MinWords is the least visible text needed to judge a website's copy
+// (stock-phrase density): below it there is too little text for the ratio
+// to mean anything.
 const MinWords = 150
+
+// DepthMinWords is the least visible text needed to assess a website at all.
+// Between it and MinWords only the unambiguous checks run (placeholders,
+// template and generator defaults, builders) plus Build Depth. A shorter site
+// is still assessed when it shows an unambiguous sign.
+const DepthMinWords = 100
 
 type pattern struct {
 	raw string
 	re  *regexp.Regexp
 }
 
-var builderRules []builderRule
+var builderRules, scaffoldRules []builderRule
 
 var rules = func() map[string][]pattern {
 	var ps phraseSet
@@ -64,6 +74,9 @@ var rules = func() map[string][]pattern {
 	}
 	for _, b := range ps.Builders {
 		builderRules = append(builderRules, builderRule{b.Name, regexp.MustCompile(b.Pattern)})
+	}
+	for _, b := range ps.ScaffoldDefaults {
+		scaffoldRules = append(scaffoldRules, builderRule{b.Name, regexp.MustCompile(b.Pattern)})
 	}
 	compile := func(list []string) []pattern {
 		var out []pattern
@@ -101,8 +114,8 @@ func (*Analyzer) Applies(in *analyzer.Input) (bool, string) {
 		if ok, _ := in.Evidence.Get(facts.KeyWebSnapshot, &ws); !ok {
 			return false, "no page content was fetched"
 		}
-		if words := totalWords(&ws); words < MinWords {
-			return false, fmt.Sprintf("not enough content to assess: only %d words of visible text across %d page(s) (at least %d needed); pages rendered entirely by JavaScript show little text to a scanner", words, 1+len(ws.Pages), MinWords)
+		if words := totalWords(&ws); words < DepthMinWords && !unambiguous(pagesOf(&ws)) {
+			return false, fmt.Sprintf("not enough content to assess: only %d words of visible text across %d page(s) (at least %d needed) and no unambiguous signs such as placeholders or generator defaults; pages rendered entirely by JavaScript show little text to a scanner", words, 1+len(ws.Pages), DepthMinWords)
 		}
 	}
 	if in.Target.Kind == analyzer.TargetRepository && !in.Evidence.Has(facts.KeyInventory) {
@@ -115,24 +128,29 @@ func (*Analyzer) Applies(in *analyzer.Input) (bool, string) {
 func (*Analyzer) Analyze(ctx context.Context, in *analyzer.Input) (*analyzer.Result, error) {
 	var tech facts.Technologies
 	in.Evidence.Get(facts.KeyTechnologies, &tech)
-	var fs []finding.Finding
-	var summary string
 	if in.Target.Kind == analyzer.TargetWebsite {
 		var ws facts.WebSnapshot
 		if _, err := in.Evidence.Get(facts.KeyWebSnapshot, &ws); err != nil {
 			return nil, err
 		}
-		fs, summary = website(&ws, &tech)
-	} else {
-		var inv facts.Inventory
-		if _, err := in.Evidence.Get(facts.KeyInventory, &inv); err != nil {
-			return nil, err
-		}
-		var err error
-		fs, summary, err = repository(ctx, in.Target.Root, &inv)
-		if err != nil {
-			return nil, err
-		}
+		fs, summary, depth := website(&ws, &tech)
+		return &analyzer.Result{
+			Findings: fs,
+			Summary:  summary,
+			Evidence: map[string]any{facts.KeySiteDepth: depth},
+			Limitations: []string{
+				"Experimental heuristics. These are indicators of unreviewed AI-generated output, not proof of AI use, and not a measure of quality on their own.",
+				"Build Depth reads only the pages fetched (front page and up to 5 linked pages); content behind a login is not seen.",
+			},
+		}, nil
+	}
+	var inv facts.Inventory
+	if _, err := in.Evidence.Get(facts.KeyInventory, &inv); err != nil {
+		return nil, err
+	}
+	fs, summary, err := repository(ctx, in.Target.Root, &inv)
+	if err != nil {
+		return nil, err
 	}
 	return &analyzer.Result{
 		Findings: fs,
@@ -230,7 +248,33 @@ func plural(n int, one, many string) string {
 	return many
 }
 
-func website(ws *facts.WebSnapshot, tech *facts.Technologies) ([]finding.Finding, string) {
+// unambiguous reports whether any page shows a sign that needs no amount of
+// text to interpret: placeholders, template leftovers or generator defaults.
+func unambiguous(ps []page) bool {
+	if n, _ := find(ps, rules["placeholders"], false); n > 0 {
+		return true
+	}
+	if n, _ := find(ps, rules["leftovers"], true); n > 0 {
+		return true
+	}
+	return len(scaffoldDefaults(ps)) > 0
+}
+
+// scaffoldDefaults returns the generator defaults found, name -> evidence.
+func scaffoldDefaults(ps []page) []match {
+	var out []match
+	for _, r := range scaffoldRules {
+		for _, p := range ps {
+			if m := r.re.FindString(p.html); m != "" {
+				out = append(out, match{phrase: r.name, url: p.url, sample: truncate(m, 90), count: 1})
+				break
+			}
+		}
+	}
+	return out
+}
+
+func website(ws *facts.WebSnapshot, tech *facts.Technologies) ([]finding.Finding, string, *facts.SiteDepth) {
 	ps := pagesOf(ws)
 	words := 0
 	for _, p := range ps {
@@ -241,7 +285,8 @@ func website(ws *facts.WebSnapshot, tech *facts.Technologies) ([]finding.Finding
 	n, ms := find(ps, rules["boilerplate"], false)
 	density := float64(n) * 1000 / float64(max(words, 1))
 	distinct := len(ms)
-	if distinct >= 3 && density >= 5 {
+	copyJudged := words >= MinWords
+	if copyJudged && distinct >= 3 && density >= 5 {
 		// Tiers: a sprinkle of stock phrases is weak evidence; many distinct
 		// ones at extreme density is characteristic of unedited generated copy.
 		sev, conf := finding.Low, finding.ConfidenceLow
@@ -280,6 +325,23 @@ func website(ws *facts.WebSnapshot, tech *facts.Technologies) ([]finding.Finding
 			Evidence:    evidence(lm, 3),
 			Rule:        &finding.Rule{ID: "template-leftover"},
 			Remediation: &finding.Remediation{Summary: "Remove the theme or builder's default pages and text.", Automatable: false},
+		})
+	}
+
+	if sd := scaffoldDefaults(ps); len(sd) > 0 {
+		names := make([]string, len(sd))
+		ev := make([]finding.Evidence, len(sd))
+		for i, m := range sd {
+			names[i] = m.phrase
+			ev[i] = finding.Evidence{Location: finding.Location{URL: m.url}, Snippet: m.sample, Detail: m.phrase}
+		}
+		out = append(out, finding.Finding{
+			Dimension: finding.DimAISignals, Category: "template-leftover", Severity: finding.Medium, Confidence: finding.ConfidenceHigh,
+			Title:       "Project generator defaults are still in place",
+			Description: fmt.Sprintf("The page still carries defaults from the tool that generated it (%s). Visitors see these in browser tabs, search results and link previews; they are a reliable sign the site was published without being finished.", strings.Join(names, ", ")),
+			Evidence:    ev,
+			Rule:        &finding.Rule{ID: "scaffold-defaults"},
+			Remediation: &finding.Remediation{Summary: "Set a real page title, description, favicon and share image.", Automatable: false},
 		})
 	}
 
@@ -324,10 +386,15 @@ func website(ws *facts.WebSnapshot, tech *facts.Technologies) ([]finding.Finding
 	if len(names) > 0 {
 		builderPart = "built with " + strings.Join(names, ", ")
 	}
-	summary := fmt.Sprintf("Checked %d page%s, %d words: %d of %d stock phrases found (%.1f per 1,000 words); %s; %s; %s",
-		len(ps), plural(len(ps), "", "s"), words, distinct, len(rules["boilerplate"]), density,
+	phrasePart := fmt.Sprintf("%d of %d stock phrases found (%.1f per 1,000 words)", distinct, len(rules["boilerplate"]), density)
+	if !copyJudged {
+		phrasePart = fmt.Sprintf("stock-phrase check skipped (fewer than %d words)", MinWords)
+	}
+	summary := fmt.Sprintf("Checked %d page%s, %d words: %s; %s; %s; %s",
+		len(ps), plural(len(ps), "", "s"), words, phrasePart,
 		count(pn, "placeholders"), count(ln, "template leftovers"), builderPart)
-	return out, summary
+	unfinished := pn + ln + len(scaffoldDefaults(ps))
+	return out, summary, siteDepth(ws, ps, words, density, copyJudged, unfinished)
 }
 
 func truncate(s string, n int) string {

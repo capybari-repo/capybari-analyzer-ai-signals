@@ -10,7 +10,7 @@
 
 **What is read:** the front page plus up to 5 same-site pages linked from it, fetched by the Website Snapshot (politely: one at a time, `robots.txt` honoured, never login/logout/admin/cart/file links). Visible text is the markup without scripts, styles, SVG and templates, with entities decoded.
 
-**Not enough content:** if all pages together contain fewer than **150 words** of visible text, the capability reports **not assessable** and no AI Dependability score is shown. A near-empty page, or a JavaScript app that renders its text in the browser, must not score a perfect 100 simply because there was nothing to read.
+**Not enough content:** the stock-phrase density check needs **150 words** of visible text across all pages. Between **100 and 149 words** only the unambiguous checks run (placeholders, template leftovers, generator defaults, builders). Below 100 words the capability reports **not assessable**, unless an unambiguous sign is present: a one-prompt page with a default "Vite + React + TS" title needs no amount of text to recognise, whereas a near-empty page or a JavaScript app behind a login must not score as clean simply because there was nothing to read.
 
 | Rule | Trigger | Severity | Confidence |
 |---|---|---|---|
@@ -19,6 +19,7 @@
 | | ≥ 10 distinct and ≥ 30 per 1,000 words | high | medium |
 | `placeholder-content` | any placeholder fragment (lorem ipsum, "Your Company", 555 numbers, example@example.com) | high: visible broken content | high |
 | `template-leftover` | default theme/builder text | low | medium |
+| `scaffold-defaults` (category `template-leftover`) | project generator defaults in the page head: default title ("Vite + React + TS", "React App", "Create Next App", `vite_react_shadcn_ts`…), the generator's default description ("Lovable Generated Project"…), the default Vite favicon, a builder's default share image | medium | high |
 | `ai-builder` | builder fingerprint in the markup of any page (generator tags, badges, asset hosts: Lovable, v0, Bolt.new, Framer, Wix, Durable, 10Web, Hostinger AI, Base44) or detected by `web-tech` | info | high |
 
 Evidence always includes at least one sample from every page that contributed.
@@ -41,4 +42,4 @@ Evidence always includes at least one sample from every page that contributed.
 
 ## Score
 
-This capability no longer produces a score of its own. Its findings feed the **AI Slop Score**, a composite meter computed by capybari-core (0 = clean, 100 = pure slop). See the [scoring methodology](https://github.com/capybari-repo/capybari-docs/blob/main/methodology/scoring.md#ai-slop).
+This capability no longer produces a score of its own. Its findings feed the **AI Slop Score**, a composite meter computed by capybari-core (0 = clean, 100 = pure slop). For websites it also publishes `site-depth` evidence (signs of effort: content pages, specific figures and names, finished metadata, trust pages, extra craft), which capybari-core turns into the **Build Depth** score (0 = shallow, 100 = deep build). See the [scoring methodology](https://github.com/capybari-repo/capybari-docs/blob/main/methodology/scoring.md#ai-slop).
