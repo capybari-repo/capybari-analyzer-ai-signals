@@ -34,6 +34,7 @@ type phraseSet struct {
 	Placeholders      []string `yaml:"placeholders"`
 	TemplateLeftovers []string `yaml:"template_leftovers"`
 	ScaffoldComments  []string `yaml:"scaffold_comments"`
+	PlaceholderConfig []string `yaml:"placeholder_config"`
 	Builders          []struct {
 		Name    string `yaml:"name"`
 		Pattern string `yaml:"pattern"`
@@ -78,6 +79,7 @@ var rules = func() map[string][]pattern {
 	return map[string][]pattern{
 		"boilerplate": compile(ps.Boilerplate), "placeholders": compile(ps.Placeholders),
 		"leftovers": compile(ps.TemplateLeftovers), "scaffold": compile(ps.ScaffoldComments),
+		"placeholder-config": compile(ps.PlaceholderConfig),
 	}
 }()
 
@@ -335,6 +337,54 @@ func truncate(s string, n int) string {
 	return s[:n] + "…"
 }
 
+// swallowed matches error handlers that silently discard the error.
+var swallowed = map[string]*regexp.Regexp{
+	"brace":   regexp.MustCompile(`catch\s*(?:\([^)]*\))?\s*\{\s*\}`),
+	"promise": regexp.MustCompile(`\.catch\(\s*(?:\(\s*\w*\s*\)|\w+)\s*=>\s*(?:\{\s*\}|null|undefined)\s*\)`),
+	"python":  regexp.MustCompile(`(?m)^[ \t]*except[^:\n]*:[ \t]*(?:\n[ \t]*)?pass[ \t]*$`),
+	"go":      regexp.MustCompile(`if\s+err\s*!=\s*nil\s*\{\s*\}`),
+}
+
+var swallowedFor = map[string][]string{
+	"JavaScript": {"brace", "promise"}, "TypeScript": {"brace", "promise"}, "Vue": {"brace", "promise"}, "Svelte": {"brace", "promise"},
+	"Java": {"brace"}, "Kotlin": {"brace"}, "C#": {"brace"}, "PHP": {"brace"}, "Dart": {"brace"}, "Swift": {"brace"}, "Scala": {"brace"},
+	"Python": {"python"}, "Go": {"go"},
+}
+
+// isComment reports whether a line is (part of) a comment.
+func isComment(line string) bool {
+	t := strings.TrimSpace(line)
+	for _, p := range []string{"//", "*", "/*", "#", "<!--", "--", ";"} {
+		if strings.HasPrefix(t, p) {
+			return true
+		}
+	}
+	return false
+}
+
+// densitySeverity grades a count by its density in shipping source: four
+// scaffolding comments in 25 lines is far worse than four in 50,000.
+func densitySeverity(count, lines int) finding.Severity {
+	perK := float64(count) * 1000 / float64(max(lines, 1))
+	switch {
+	case count >= 10 || count >= 3 && perK >= 5:
+		return finding.High
+	case count >= 3 || perK >= 1:
+		return finding.Medium
+	}
+	return finding.Low
+}
+
+// shipping reports whether a file is production code or configuration (not
+// tests, examples, docs or example env files).
+func shipping(f facts.File) bool {
+	if facts.PathContext(f.Path) != facts.ContextProduction || f.Kind == facts.KindTest || f.Kind == facts.KindDocs {
+		return false
+	}
+	base := strings.ToLower(path.Base(f.Path))
+	return !strings.Contains(base, "example") && !strings.Contains(base, "sample") && !strings.Contains(base, "template")
+}
+
 var assistantFiles = map[string]string{
 	".cursorrules": "Cursor", ".windsurfrules": "Windsurf", ".clinerules": "Cline", "claude.md": "Claude Code",
 	"agents.md": "AI coding agents", ".github/copilot-instructions.md": "GitHub Copilot", ".aider.conf.yml": "Aider",
@@ -381,8 +431,8 @@ func repository(ctx context.Context, root string, inv *facts.Inventory) ([]findi
 	}
 
 	builders := map[string]string{}
-	var scaffold []finding.Evidence
-	scaffoldCount := 0
+	var scaffold, swallowEv, placeholderEv []finding.Evidence
+	scaffoldCount, swallowCount, placeholderCount, shippingLines := 0, 0, 0, 0
 	for _, f := range inv.Files {
 		if err := ctx.Err(); err != nil {
 			return nil, "", err
@@ -397,12 +447,43 @@ func repository(ctx context.Context, root string, inv *facts.Inventory) ([]findi
 				}
 			}
 		}
+		if (f.Kind == facts.KindConfig || f.Kind == facts.KindSource) && shipping(f) && f.Size <= fsutil.DefaultMaxRead {
+			if b, _, err := fsutil.ReadFile(root, f.Path, fsutil.DefaultMaxRead); err == nil {
+				fsutil.Lines(b, func(n int, line string) bool {
+					if isComment(line) {
+						return true // documentation examples are not configuration
+					}
+					for _, p := range rules["placeholder-config"] {
+						if p.re.MatchString(line) {
+							placeholderCount++
+							if len(placeholderEv) < 10 {
+								placeholderEv = append(placeholderEv, finding.Evidence{Location: finding.Location{Path: f.Path, StartLine: n}, Snippet: truncate(strings.TrimSpace(line), 120)})
+							}
+							break
+						}
+					}
+					return true
+				})
+			}
+		}
 		if f.Kind != facts.KindSource || f.Size > fsutil.DefaultMaxRead {
 			continue
 		}
 		b, _, err := fsutil.ReadFile(root, f.Path, fsutil.DefaultMaxRead)
 		if err != nil {
 			continue
+		}
+		if shipping(f) {
+			shippingLines += f.Lines
+			for _, key := range swallowedFor[f.Language] {
+				for _, loc := range swallowed[key].FindAllIndex(b, -1) {
+					swallowCount++
+					if len(swallowEv) < 10 {
+						line := 1 + strings.Count(string(b[:loc[0]]), "\n")
+						swallowEv = append(swallowEv, finding.Evidence{Location: finding.Location{Path: f.Path, StartLine: line}, Snippet: truncate(strings.Join(strings.Fields(string(b[loc[0]:loc[1]])), " "), 120)})
+					}
+				}
+			}
 		}
 		fsutil.Lines(b, func(n int, line string) bool {
 			for _, p := range rules["scaffold"] {
@@ -433,10 +514,7 @@ func repository(ctx context.Context, root string, inv *facts.Inventory) ([]findi
 		})
 	}
 	if scaffoldCount > 0 {
-		sev := finding.Low
-		if scaffoldCount >= 5 {
-			sev = finding.Medium
-		}
+		sev := densitySeverity(scaffoldCount, shippingLines)
 		out = append(out, finding.Finding{
 			Dimension: finding.DimAISignals, Category: "scaffold-code", Severity: sev, Confidence: finding.ConfidenceMedium,
 			Title:                 fmt.Sprintf("%d scaffolding comment(s) left in source code", scaffoldCount),
@@ -447,5 +525,27 @@ func repository(ctx context.Context, root string, inv *facts.Inventory) ([]findi
 			FalsePositiveGuidance: "Example and documentation code legitimately contains such comments.",
 		})
 	}
-	return out, fmt.Sprintf("%d AI assistant config(s), %d builder marker(s), %d scaffolding comment(s)", len(assistants), len(builders), scaffoldCount), nil
+	if swallowCount > 0 {
+		sev := densitySeverity(swallowCount, shippingLines)
+		out = append(out, finding.Finding{
+			Dimension: finding.DimMaintainability, Category: "swallowed-errors", Severity: sev, Confidence: finding.ConfidenceMedium,
+			Title:                 fmt.Sprintf("%d error handler(s) silently discard errors", swallowCount),
+			Description:           "Empty catch/except blocks and ignored error checks hide failures: the program continues in a broken state and nobody is told. Generated code often adds them to make examples run.",
+			Evidence:              swallowEv,
+			Rule:                  &finding.Rule{ID: "swallowed-errors"},
+			Remediation:           &finding.Remediation{Summary: "Handle each error (retry, return it, or report it to the user) and at least log it with context.", Automatable: false},
+			FalsePositiveGuidance: "Deliberately ignored errors should carry a comment explaining why; this check cannot see intent.",
+		})
+	}
+	if placeholderCount > 0 {
+		out = append(out, finding.Finding{
+			Dimension: finding.DimAISignals, Category: "placeholder-config", Severity: densitySeverity(placeholderCount, shippingLines), Confidence: finding.ConfidenceHigh,
+			Title:       fmt.Sprintf("%d placeholder value(s) left in code or configuration", placeholderCount),
+			Description: "Values such as \"YOUR_API_KEY_HERE\", \"changeme\" or api.example.com in shipping code mean configuration was never completed, or a default credential is live.",
+			Evidence:    placeholderEv,
+			Rule:        &finding.Rule{ID: "placeholder-config"},
+			Remediation: &finding.Remediation{Summary: "Replace placeholders with real configuration loaded from the environment or a secret manager; never ship default credentials.", Automatable: false},
+		})
+	}
+	return out, fmt.Sprintf("%d AI assistant config(s), %d builder marker(s), %d scaffolding comment(s), %d swallowed error(s), %d placeholder value(s)", len(assistants), len(builders), scaffoldCount, swallowCount, placeholderCount), nil
 }

@@ -104,6 +104,17 @@ scaffold_comments:
   - for demonstration purposes
   - mock data for now
   - "todo: implement (?:actual|real|proper)"
+# Placeholder values left in source or configuration.
+placeholder_config:
+  # Only quoted literals count: identifiers such as yourApiKey are fine.
+  - "[\"'<]your[_ -]?api[_ -]?key(?:[_ -]?here)?[>\"']"
+  - "[\"']YOUR_[A-Z0-9_]+_HERE[\"']"
+  - "[\"']<your[-_ ][a-z0-9 _-]+>[\"']"
+  - "[\"']replace[_-]?me[\"']"
+  - "[\"']changeme[\"']"
+  - "[\"']sk-x{8,}[\"']"
+  - "https?://api\\.example\\.com"
+  - "https?://(?:www\\.)?example\\.com/api"
 # AI site builders, detected in markup (generator tags, badges, asset hosts).
 builders:
   - {name: Lovable, pattern: '(?i)lovable\.(?:dev|app)|gptengineer\.js|data-lov-id|edit with lovable'}

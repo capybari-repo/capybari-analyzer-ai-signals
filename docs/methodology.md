@@ -31,8 +31,14 @@ Evidence always includes at least one sample from every page that contributed.
 |---|---|---|
 | `ai-assistant-config` | `.cursorrules`, `.cursor/rules/`, `CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`, `.windsurfrules`, `.clinerules`, `.aider.conf.yml` | info |
 | `ai-builder` | Lovable / Bolt.new / v0 markers in `package.json`, `README.md` or `index.html` | info |
-| `scaffold-comments` | scaffolding comments in source files | low; medium at ≥ 5 |
+| `scaffold-comments` | scaffolding comments in source files | by density* |
+| `swallowed-errors` | empty `catch {}` / `.catch(() => {})` (JS/TS, Java, Kotlin, C#, PHP, Dart, Swift, Scala), `except …: pass` (Python), `if err != nil {}` (Go), in shipping code only | by density*, medium confidence |
+| `placeholder-config` | quoted placeholder values (`"YOUR_API_KEY_HERE"`, `"<your-token>"`, `"changeme"`, `"replace-me"`, `"sk-xxxxxxxx"`) or `api.example.com` URLs in shipping source/config, **excluding comment lines** (documentation examples) | by density*, high confidence |
+
+\* **Density severity:** high when ≥ 10 occurrences, or ≥ 3 at ≥ 5 per 1,000 shipping source lines; medium when ≥ 3, or ≥ 1 per 1,000 lines; otherwise low. Four scaffolding comments in 25 lines is far worse than four in 50,000.
+
+"Shipping code" excludes tests, fixtures, examples, docs and files named `*example*`, `*sample*` and `*template*` (such as `.env.example`).
 
 ## Score
 
-The standard scoring method, in dimension `ai-signals` ("AI Dependability"), always shown with low confidence because the capability is experimental.
+This capability no longer produces a score of its own. Its findings feed the **AI Slop Score**, a composite meter computed by capybari-core (0 = clean, 100 = pure slop). See the [scoring methodology](https://github.com/capybari-repo/capybari-docs/blob/main/methodology/scoring.md#ai-slop).

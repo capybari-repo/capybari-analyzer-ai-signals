@@ -1,14 +1,14 @@
 id: ai-signals
 name: AI-Generation Signals
-version: 0.2.0
+version: 0.3.0
 category: ai
-summary: Looks for indicators of unreviewed AI-generated content or code across the front page and up to 5 linked pages (67 boilerplate marketing phrases, placeholder text, AI site-builder fingerprints, template leftovers, scaffolding comments) and reports an AI Dependability score. Pages with too little text are marked not assessable. Indicators, not proof.
+summary: Collects indicators of unreviewed AI-generated work. Websites (front page and up to 5 linked pages) - 67 stock marketing phrases, live placeholders, template leftovers, AI site-builder fingerprints. Repositories - AI assistant configs, builder markers, scaffolding comments, swallowed errors and placeholder configuration. Its evidence feeds the AI Slop Score, a composite computed by capybari-core. Indicators, not proof.
 stability: experimental
 core_api: v0
 targets: [website, repository]
 optional: [web-snapshot, inventory, technologies]
-findings: [ai-boilerplate, placeholder-content, ai-builder, template-leftover, scaffold-code, ai-assistant-config]
-scores: [ai-signals]
+findings: [ai-boilerplate, placeholder-content, ai-builder, template-leftover, scaffold-code, swallowed-errors, placeholder-config, ai-assistant-config]
+scores: []
 cost: low
 execution:
   local: true
