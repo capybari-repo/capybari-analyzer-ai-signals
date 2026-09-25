@@ -56,7 +56,7 @@ const MinWords = 150
 
 // DepthMinWords is the least visible text needed to assess a website at all.
 // Between it and MinWords only the unambiguous checks run (placeholders,
-// template and generator defaults, builders) plus Build Depth. A shorter site
+// template and generator defaults, builders) plus Looks Shipped. A shorter site
 // is still assessed when it shows an unambiguous sign.
 const DepthMinWords = 100
 
@@ -140,7 +140,7 @@ func (*Analyzer) Analyze(ctx context.Context, in *analyzer.Input) (*analyzer.Res
 			Evidence: map[string]any{facts.KeySiteDepth: depth},
 			Limitations: []string{
 				"Experimental heuristics. These are indicators of unreviewed AI-generated output, not proof of AI use, and not a measure of quality on their own.",
-				"Build Depth reads only the pages fetched (front page and up to 5 linked pages); content behind a login is not seen.",
+				"Looks Shipped reads only the pages fetched (front page and up to 5 linked pages); content behind a login is not seen.",
 			},
 		}, nil
 	}

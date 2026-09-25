@@ -9,7 +9,7 @@ import (
 	"github.com/capybari-repo/capybari-core/webtext"
 )
 
-// Build Depth credits signs of effort, read only from the pages already
+// Looks Shipped (score ID build-depth) credits signs of effort, read only from the pages already
 // fetched. Groups and their maximum points (total 100):
 //
 //	breadth 15, specificity 20, originality 20, finish 20, trust 10, craft 15

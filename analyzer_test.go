@@ -103,7 +103,7 @@ func TestMultiPageFixture(t *testing.T) {
 	s := slop(t, r)
 	// Website groups: AI-generation signs (assessed) + security (web-security did
 	// not run in this focused test, so not assessed).
-	if !s.IsHigherWorse() || s.Value < 25 || s.Label == "Low slop" || s.Confidence != finding.ConfidenceLow {
+	if !s.IsHigherWorse() || s.Value < 25 || s.Label == "Low unfinished risk" || s.Confidence != finding.ConfidenceLow {
 		t.Fatalf("sloppy site must read as moderate/high slop: %+v", s)
 	}
 	joined := strings.Join(s.Basis, "|")
@@ -134,7 +134,7 @@ Celebration cakes need two days' notice: call 0161 496 0000 and ask for Priya. W
 		t.Fatalf("specific human copy flagged: %+v", r.Findings)
 	}
 	s := slop(t, r)
-	if s.Value != 0 || s.Label != "Low slop" || !strings.Contains(strings.Join(s.Basis, "|"), "no placeholders; no template leftovers; no AI builder detected") {
+	if s.Value != 0 || s.Label != "Low unfinished risk" || !strings.Contains(strings.Join(s.Basis, "|"), "no placeholders; no template leftovers; no AI builder detected") {
 		t.Fatalf("clean copy must read 0 = no slop, with an explicit basis: %+v", s)
 	}
 }
@@ -230,7 +230,7 @@ func TestShortPageWithGeneratorDefaults(t *testing.T) {
 		t.Fatalf("generator defaults: %+v", r.Findings)
 	}
 	d := depth(r)
-	if d == nil || d.Value >= 35 || d.Label != "Shallow build" || d.IsHigherWorse() {
+	if d == nil || d.Value >= 35 || d.Label != "Thin build" || d.IsHigherWorse() {
 		t.Fatalf("one-prompt page must read as a shallow build: %+v", d)
 	}
 }

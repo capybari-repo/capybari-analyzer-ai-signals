@@ -2,7 +2,7 @@ id: ai-signals
 name: AI-Generation Signals
 version: 0.4.0
 category: ai
-summary: Collects indicators of unreviewed AI-generated work. Websites (front page and up to 5 linked pages) - 67 stock marketing phrases, live placeholders, template leftovers, AI site-builder fingerprints. Repositories - AI assistant configs, builder markers, scaffolding comments, swallowed errors and placeholder configuration. Its evidence feeds two composites computed by capybari-core - the AI Slop Score (signs of unreviewed output) and, for websites, Build Depth (signs of effort such as real content pages, specific facts, finished metadata, trust pages and extra craft). Short sites (100-149 words) get only the unambiguous checks; shorter ones are assessed only when an unambiguous sign such as a placeholder or generator default is present. Indicators, not proof.
+summary: Collects indicators of unreviewed AI-generated work. Websites (front page and up to 5 linked pages) - 67 stock marketing phrases, live placeholders, template leftovers, AI site-builder fingerprints. Repositories - AI assistant configs, builder markers, scaffolding comments, swallowed errors and placeholder configuration. Its evidence feeds two composites computed by capybari-core - Unfinished Risk, formerly the AI Slop Score (signs of unreviewed output), and, for websites, Looks Shipped (signs of a finished product such as real content pages, specific facts, finished metadata, trust pages and extra craft). Short sites (100-149 words) get only the unambiguous checks; shorter ones are assessed only when an unambiguous sign such as a placeholder or generator default is present. Indicators, not proof.
 stability: experimental
 core_api: v0
 targets: [website, repository]
