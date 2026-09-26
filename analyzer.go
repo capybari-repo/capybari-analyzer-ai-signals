@@ -32,6 +32,7 @@ var capability = analyzer.MustParseCapability(capabilityYAML)
 type phraseSet struct {
 	Boilerplate       []string       `yaml:"boilerplate"`
 	Placeholders      []string       `yaml:"placeholders"`
+	DemoNames         []string       `yaml:"demo_names"`
 	TemplateLeftovers []string       `yaml:"template_leftovers"`
 	ScaffoldComments  []string       `yaml:"scaffold_comments"`
 	PlaceholderConfig []string       `yaml:"placeholder_config"`
@@ -90,7 +91,7 @@ var rules = func() map[string][]pattern {
 		return out
 	}
 	return map[string][]pattern{
-		"boilerplate": compile(ps.Boilerplate), "placeholders": compile(ps.Placeholders),
+		"boilerplate": compile(ps.Boilerplate), "placeholders": compile(ps.Placeholders), "demo-names": compile(ps.DemoNames),
 		"leftovers": compile(ps.TemplateLeftovers), "scaffold": compile(ps.ScaffoldComments),
 		"placeholder-config": compile(ps.PlaceholderConfig),
 	}
@@ -182,8 +183,9 @@ func totalWords(ws *facts.WebSnapshot) int {
 }
 
 type match struct {
-	phrase, url, sample string
-	count               int
+	// phrase is the rule; found is the first text it matched on the page.
+	phrase, found, url, sample string
+	count                      int
 }
 
 // find counts pattern matches across pages; one match per phrase keeps the
@@ -202,7 +204,7 @@ func find(ps []page, pats []pattern, withTitle bool) (total int, ms []match) {
 			}
 			if m == nil {
 				s := text[max(0, locs[0][0]-40):min(len(text), locs[0][1]+40)]
-				m = &match{phrase: p.raw, url: pg.url, sample: "…" + strings.TrimSpace(s) + "…"}
+				m = &match{phrase: p.raw, found: text[locs[0][0]:locs[0][1]], url: pg.url, sample: "…" + strings.TrimSpace(s) + "…"}
 			}
 			m.count += len(locs)
 		}
@@ -235,7 +237,11 @@ func evidence(ms []match, n int) []finding.Evidence {
 	var ev []finding.Evidence
 	for i, m := range ms {
 		if chosen[i] {
-			ev = append(ev, finding.Evidence{Location: finding.Location{URL: m.url}, Snippet: m.sample, Detail: fmt.Sprintf("%q ×%d", m.phrase, m.count)})
+			shown := m.found
+			if shown == "" {
+				shown = m.phrase
+			}
+			ev = append(ev, finding.Evidence{Location: finding.Location{URL: m.url}, Snippet: m.sample, Detail: fmt.Sprintf("%q ×%d", shown, m.count)})
 		}
 	}
 	return ev
@@ -315,6 +321,17 @@ func website(ws *facts.WebSnapshot, tech *facts.Technologies) ([]finding.Finding
 			Evidence:    evidence(pm, 5),
 			Rule:        &finding.Rule{ID: "placeholder-content"},
 			Remediation: &finding.Remediation{Summary: "Replace every placeholder with real content before publishing.", Automatable: false},
+		})
+	}
+	if dn, dm := find(ps, rules["demo-names"], false); dn > 0 {
+		out = append(out, finding.Finding{
+			Dimension: finding.DimAISignals, Category: "demo-names", Severity: finding.Low, Confidence: finding.ConfidenceLow,
+			Title:                 fmt.Sprintf("Demo names appear on the site (%s)", dm[0].found),
+			Description:           "Names like \"Acme Inc\" or \"John Doe\" are typical of templates and generated pages. They are also used on purpose in product mockups, so check whether they were meant to be there.",
+			Evidence:              evidence(dm, 3),
+			Rule:                  &finding.Rule{ID: "demo-names"},
+			Remediation:           &finding.Remediation{Summary: "Replace demo names in real content; keep them only in clearly marked mockups."},
+			FalsePositiveGuidance: "Screenshots and interactive demos often use demo company names deliberately.",
 		})
 	}
 	ln, lm := find(ps, rules["leftovers"], true)

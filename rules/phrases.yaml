@@ -86,7 +86,11 @@ placeholders:
   - "123 main st"
   - "\\(555\\) ?555-"
   - insert text here
+# Demo names: common in product mockups and screenshots on purpose, so they
+# are a weak signal on their own (low severity, never a score ceiling).
+demo_names:
   - john doe
+  - jane doe
   - acme (?:corp|inc)
 template_leftovers:
   - just another wordpress site
