@@ -18,6 +18,7 @@
 | | ≥ 6 distinct and ≥ 15 per 1,000 words | medium | low |
 | | ≥ 10 distinct and ≥ 30 per 1,000 words | high | medium |
 | `placeholder-content` | any placeholder fragment (lorem ipsum, "Your Company", 555 numbers, example@example.com) | high: visible broken content | high |
+| `demo-names` | demo names such as Acme Inc/Corp, John/Jane Doe (often deliberate in product mockups) | low | low |
 | `template-leftover` | default theme/builder text | low | medium |
 | `scaffold-defaults` (category `template-leftover`) | project generator defaults in the page head: default title ("Vite + React + TS", "React App", "Create Next App", `vite_react_shadcn_ts`…), the generator's default description ("Lovable Generated Project"…), the default Vite favicon, a builder's default share image | medium | high |
 | `ai-builder` | builder fingerprint in the markup of any page (generator tags, badges, asset hosts: Lovable, v0, Bolt.new, Framer, Wix, Durable, 10Web, Hostinger AI, Base44) or detected by `web-tech` | info | high |
